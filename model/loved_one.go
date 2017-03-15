@@ -24,6 +24,10 @@ type LovedOne struct {
     UserId int       `json:"user_id"`
 }
 
+type insertDBResponse struct {
+    Id string `json:"id"`
+}
+
 func(l *LovedOne) WriteImagesToFile(dir string) error {
     for _, i := range(l.Images) {
         data, err := base64.StdEncoding.DecodeString(i)
@@ -39,19 +43,23 @@ func(l *LovedOne) WriteImagesToFile(dir string) error {
     return nil
 }
 
-func (l *LovedOne) InsertIntoDB() error {
-    b, err := json.Marshal(l)
+func (l *LovedOne) InsertIntoDB() (int, error) {
+    b, err := json.Marshal(l.Profile)
     if err != nil {
-        return err
+        return -1, err
     }
 
     buf := bytes.NewBuffer(b)
-    //Have response return meaningful success message.
-    resp, err := http.Post("http://127.0.0.1/api/v1/users/loved-ones")
+    resp, err := http.Post("http://127.0.0.1/api/v1/users/loved-ones", "application/json", buf)
     defer resp.Body.Close()
     if err != nil {
-        return err
+        return -1, err
     }
 
-    return nil
+    var r insertDBResponse
+    err := json.NewDecoder(resp.Body).Decode(&r)
+    if err = nil {
+        return -1, err
+    }
+    return r.Id, nil
 }
