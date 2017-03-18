@@ -4,11 +4,11 @@ import (
     "net/http"
     "fa/model"
     "fa/openface"
+    "fa/s3util"
     "encoding/json"
     "os"
+    "fmt"
 )
-
-
 
 func TrainingHandler() http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -19,8 +19,8 @@ func TrainingHandler() http.HandlerFunc {
             return
         }
 
-        dir := "/tmp/" + l.UserId
-        err := os.Mkdir(dir, os.ModeTemporary)
+        dir := fmt.Sprintf("/tmp/%d", l.UserId)
+        err = os.Mkdir(dir, os.ModeTemporary)
         defer  os.RemoveAll(dir)
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -37,13 +37,25 @@ func TrainingHandler() http.HandlerFunc {
             return
         }
 
-        err = openface.Train(imgDir, alignDir, featureDir)
+        err = openface.Train(imgDir, alignDir, featureDir, l.UserId)
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
         }
 
-        err = l.InsertIntoDB()
+        id, err := l.InsertIntoDB()
+        if err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
+        }
+
+        err = s3util.UploadFile(fmt.Sprintf("%s/labels.csv", featureDir), fmt.Sprintf("%s/%s/labels.csv", l.UserId, id))
+        if err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
+        }
+
+        err = s3util.UploadFile(fmt.Sprintf("%s/reps.csv", featureDir), fmt.Sprintf("%s/%s/reps.csv", l.UserId, id))
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return

@@ -1,22 +1,16 @@
-package s3utils
+package s3util
 
 import (
     "io"
-    "ioutil"
-    "bufio"
     "os"
     "fmt"
+    "github.com/aws/aws-sdk-go/aws"
     "github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/s3"
-    "net/http"
-    "encoding/json"
+    "fa/model"
 )
 
-type getLovedOnesResponse struct {
-    LovedOnes []int `json:"loved_ones"`
-}
-
-func GetObject(bucketName string, object string) (io.ReadCloser, error) {
+func getS3Object(bucketName string, object string) (io.ReadCloser, error) {
     var r io.ReadCloser
     sess, err := session.NewSession()
     if err != nil {
@@ -38,45 +32,52 @@ func GetObject(bucketName string, object string) (io.ReadCloser, error) {
     return resp.Body, nil
 }
 
-func GetLabels(userId string) (*File, error) {
-    //Refactor
-    file, err := ioutil.TempFile("/tmp/", userId)
-    if err != nil {
-        return "", err
+func GetFeature(fileName string, userId int, dst io.Writer) error {
+    lovedOnes, err := model.GetIdsOfLovedOnes(userId)
+    if err != nil{
+        return err
     }
 
-    fileWriter := bufio.NewWriter(file)
-
-    resp, err := http.Get("http://127.0.0.1/api/v1/users/loved-ones?user_id=" + userId)
-    if err != nil {
-        return "", err
-    }
-
-    var r getLovedOnesResponse
-    err := json.NewDecoder(resp.Body).Decode(&r)
-    if err != nil {
-        return "", err
-    }
-
-    for _, id := range r.LovedOnes {
-        objReader, err := GetObject("fa", fmt.Sprintf("features/%d/%d/labels.csv", userId, id))
+    for _, id := range lovedOnes {
+        objReader, err := getS3Object("fa", fmt.Sprintf("features/%d/%d/%s", userId, id, fileName))
         if err != nil {
-            return "", err
+            return err
         }
 
-        //FINISH THIS
-        _, err := io.Copy(writer, objReader)
+        _, err = io.Copy(dst, objReader)
         if err != nil {
-            return "", err
+            return err
         }
     }
+    return nil
+}
 
-    err := os.Rename(file.Name(), file.Name() + ".csv")
+func putS3Object(bucketName string, objectKey string, file io.ReadSeeker) error {
+    sess, err := session.NewSession()
     if err != nil {
-        return "", err
+        return err
     }
-    //Get list of profile ids from fa-db.
-    //Loop through each id, create urls for s3 get
-    //make get request, concat bytes to one file
-    //return file
+
+    svc := s3.New(sess)
+    params := &s3.PutObjectInput{
+        Bucket: aws.String(bucketName),
+        Key: aws.String(objectKey),
+        Body: file,
+    }
+
+    _, err = svc.PutObject(params)
+    if err != nil {
+        return err
+    }
+    //log response
+    return nil
+}
+
+func UploadFile(file string, objectKey string) error {
+    f, err := os.Open(file)
+    defer f.Close()
+    if err != nil {
+        return err
+    }
+    return putS3Object("fa", objectKey, f)
 }
