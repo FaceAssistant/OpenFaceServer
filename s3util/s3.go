@@ -10,7 +10,7 @@ import (
     "fa/model"
 )
 
-func getS3Object(bucketName string, object string) (io.ReadCloser, error) {
+func getObject(bucketName string, object string) (io.ReadCloser, error) {
     var r io.ReadCloser
     sess, err := session.NewSession()
     if err != nil {
@@ -38,8 +38,8 @@ func GetFeature(fileName string, userId int, dst io.Writer) error {
         return err
     }
 
-    for _, id := range lovedOnes {
-        objReader, err := getS3Object("fa", fmt.Sprintf("features/%d/%d/%s", userId, id, fileName))
+    if len(lovedOnes) == 0 {
+        objReader, err := getObject("faceassist", fmt.Sprintf("celeb/%s", fileName))
         if err != nil {
             return err
         }
@@ -47,6 +47,18 @@ func GetFeature(fileName string, userId int, dst io.Writer) error {
         _, err = io.Copy(dst, objReader)
         if err != nil {
             return err
+        }
+    } else {
+        for _, id := range lovedOnes {
+            objReader, err := getObject("faceassist", fmt.Sprintf("features/%d/%d/%s", userId, id, fileName))
+            if err != nil {
+                return err
+            }
+
+            _, err = io.Copy(dst, objReader)
+            if err != nil {
+                return err
+            }
         }
     }
     return nil
@@ -79,5 +91,5 @@ func UploadFile(file string, objectKey string) error {
     if err != nil {
         return err
     }
-    return putS3Object("fa", objectKey, f)
+    return putS3Object("faceassist", objectKey, f)
 }
