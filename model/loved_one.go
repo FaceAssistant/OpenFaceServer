@@ -25,7 +25,6 @@ type getLovedOnesResponse struct {
 type LovedOne struct {
     Profile profile `json:"profile"`
     Images []string  `json:"images"`
-    UserId int       `json:"user_id"`
 }
 
 type insertDBResponse struct {
@@ -33,6 +32,11 @@ type insertDBResponse struct {
 }
 
 func(l *LovedOne) WriteImagesToFile(dir string) error {
+    err := os.Mkdir(dir, 0777)
+    if err != nil {
+        return err
+    }
+
     for _, i := range(l.Images) {
         data, err := base64.StdEncoding.DecodeString(i)
         if err != nil {
@@ -47,18 +51,25 @@ func(l *LovedOne) WriteImagesToFile(dir string) error {
     return nil
 }
 
-func (l *LovedOne) InsertIntoDB() (int, error) {
+func (l *LovedOne) InsertIntoDB(userId string) (int, error) {
     b, err := json.Marshal(l.Profile)
     if err != nil {
         return -1, err
     }
 
     buf := bytes.NewBuffer(b)
-    resp, err := http.Post("http://127.0.0.1/api/v1/users/loved-ones", "application/json", buf)
-    defer resp.Body.Close()
+    req, err := http.NewRequest("POST","http://localhost/api/v1/users/loved-one", buf)
     if err != nil {
         return -1, err
     }
+
+    req.Header.Set("Authorization", userId)
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        return -1, err
+    }
+    defer resp.Body.Close()
 
     var r insertDBResponse
     err = json.NewDecoder(resp.Body).Decode(&r)
@@ -69,11 +80,11 @@ func (l *LovedOne) InsertIntoDB() (int, error) {
 }
 
 func GetIdsOfLovedOnes(userId int) ([]int, error) {
-    resp, err := http.Get(fmt.Sprintf("http://127.0.0.1/api/v1/users/loved-ones?user_id=%d", userId))
-    defer resp.Body.Close()
+    resp, err := http.Get(fmt.Sprintf("http://localhost/api/v1/users/loved-one?user_id=%d", userId))
     if err != nil {
         return nil, err
     }
+    defer resp.Body.Close()
 
     var r getLovedOnesResponse
     err = json.NewDecoder(resp.Body).Decode(&r)

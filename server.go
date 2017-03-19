@@ -3,12 +3,15 @@ package main
 import (
     "net/http"
     "github.com/gorilla/mux"
+    "github.com/justinas/alice"
     "log"
     "fa/web"
+    "fa/middleware"
 )
 
 func main() {
     r := mux.NewRouter().StrictSlash(true)
     r.HandleFunc("/train", web.TrainingHandler()).Methods("Post")
-    log.Fatal(http.ListenAndServe(":8082", r))
+    a := alice.New(middleware.AuthMiddleWare).Then(r)
+    log.Fatal(http.ListenAndServe(":8081", a))
 }

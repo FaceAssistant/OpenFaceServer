@@ -43,6 +43,7 @@ func GetFeature(fileName string, userId int, dst io.Writer) error {
         if err != nil {
             return err
         }
+        defer objReader.Close()
 
         _, err = io.Copy(dst, objReader)
         if err != nil {
@@ -50,10 +51,12 @@ func GetFeature(fileName string, userId int, dst io.Writer) error {
         }
     } else {
         for _, id := range lovedOnes {
-            objReader, err := getObject("faceassist", fmt.Sprintf("features/%d/%d/%s", userId, id, fileName))
+            objectKey := fmt.Sprintf("features/%d/%d/%s", userId, id, fileName)
+            objReader, err := getObject("faceassist", objectKey)
             if err != nil {
                 return err
             }
+            defer objReader.Close()
 
             _, err = io.Copy(dst, objReader)
             if err != nil {
