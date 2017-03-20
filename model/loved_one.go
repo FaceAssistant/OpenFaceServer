@@ -10,7 +10,7 @@ import (
     "os"
 )
 
-type profile struct {
+type Profile struct {
     Name string             `json:"name"`
     Birthday string         `json:"birthday"`
     Relationship string     `json:"relationship"`
@@ -23,7 +23,7 @@ type getLovedOnesResponse struct {
 }
 
 type LovedOne struct {
-    Profile profile `json:"profile"`
+    Prof   Profile `json:"profile"`
     Images []string  `json:"images"`
 }
 
@@ -43,7 +43,7 @@ func(l *LovedOne) WriteImagesToFile(dir string) error {
             return err
         }
 
-        _, err = writeBytesToFile(data, dir)
+        _, err = WriteBytesToFile(data, dir)
         if err != nil {
             return err
         }
@@ -52,7 +52,7 @@ func(l *LovedOne) WriteImagesToFile(dir string) error {
 }
 
 func (l *LovedOne) InsertIntoDB(userId string) (int, error) {
-    b, err := json.Marshal(l.Profile)
+    b, err := json.Marshal(l.Prof)
     if err != nil {
         return -1, err
     }
@@ -95,8 +95,8 @@ func GetIdsOfLovedOnes(userId int) ([]int, error) {
     return r.LovedOnes, nil
 }
 
-
-func writeBytesToFile(b []byte, dir string) (string, error) {
+//Probably moved this to another package
+func WriteBytesToFile(b []byte, dir string) (string, error) {
     f, err := ioutil.TempFile(dir, "img-")
     if err != nil {
         return "", err

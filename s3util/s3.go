@@ -5,6 +5,7 @@ import (
     "os"
     "fmt"
     "github.com/aws/aws-sdk-go/aws"
+    "github.com/aws/aws-sdk-go/aws/awserr"
     "github.com/aws/aws-sdk-go/aws/session"
     "github.com/aws/aws-sdk-go/service/s3"
     "fa/model"
@@ -32,37 +33,63 @@ func getObject(bucketName string, object string) (io.ReadCloser, error) {
     return resp.Body, nil
 }
 
+func GetClassifier(userId string, dst io.Writer) error {
+    var objReader io.ReadCloser
+    objReader, err := getObject("faceassist", fmt.Sprintf("features/%s/classifier.pkl", userId))
+    if err != nil {
+        if awsErr, ok := err.(awserr.Error); ok {
+            if awsErr.Code() != "NoSuchKey" {
+                return err
+            } else {
+                objReader, err = getObject("faceassist", "celeb/classifier.pkl")
+                if err != nil {
+                    return err
+                }
+                defer objReader.Close()
+            }
+        } else {
+            return err
+        }
+    }
+    defer objReader.Close()
+
+    _, err = io.Copy(dst, objReader)
+    if err != nil {
+        return err
+    }
+
+    return nil
+}
+
 func GetFeature(fileName string, userId int, dst io.Writer) error {
     lovedOnes, err := model.GetIdsOfLovedOnes(userId)
     if err != nil{
         return err
     }
 
-    if len(lovedOnes) == 0 {
-        objReader, err := getObject("faceassist", fmt.Sprintf("celeb/%s", fileName))
+    celeb, err := getObject("faceassist", fmt.Sprintf("celeb/%s", fileName))
+    if err != nil {
+        return err
+    }
+    defer celeb.Close()
+
+    _, err = io.Copy(dst, celeb)
+    if err != nil {
+        return err
+    }
+
+    for _, id := range lovedOnes {
+        objectKey := fmt.Sprintf("features/%d/%d/%s", userId, id, fileName)
+        objReader, err := getObject("faceassist", objectKey)
         if err != nil {
             return err
         }
-        defer objReader.Close()
 
         _, err = io.Copy(dst, objReader)
         if err != nil {
             return err
         }
-    } else {
-        for _, id := range lovedOnes {
-            objectKey := fmt.Sprintf("features/%d/%d/%s", userId, id, fileName)
-            objReader, err := getObject("faceassist", objectKey)
-            if err != nil {
-                return err
-            }
-            defer objReader.Close()
-
-            _, err = io.Copy(dst, objReader)
-            if err != nil {
-                return err
-            }
-        }
+        objReader.Close()
     }
     return nil
 }
