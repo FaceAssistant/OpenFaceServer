@@ -4,6 +4,7 @@ import (
     "os/exec"
     "fa/s3util"
     "fmt"
+    "io"
     "os"
 )
 
@@ -53,13 +54,35 @@ func GenReps(alignDir string, featureDir string) error {
 
 func ConcatFeatures(featureDir string, userId int) error {
     labels, err := os.OpenFile(fmt.Sprintf("%s/labels.csv", featureDir), os.O_APPEND|os.O_WRONLY, 0600)
+    if err != nil {
+        return err
+    }
     defer labels.Close()
+
+    reps, err := os.OpenFile(fmt.Sprintf("%s/reps.csv", featureDir), os.O_APPEND|os.O_WRONLY, 0600)
+    if err != nil {
+        return err
+    }
+    defer reps.Close()
+
+    l, err := os.Create(fmt.Sprintf(featureDir + "/labels"))
+    if err != nil {
+        return err
+    }
+    defer l.Close()
+
+    r, err := os.Create(fmt.Sprintf(featureDir + "/reps"))
+    if err != nil {
+        return err
+    }
+    defer r.Close()
+
+    _, err = io.Copy(l, labels)
     if err != nil {
         return err
     }
 
-    reps, err := os.OpenFile(fmt.Sprintf("%s/reps.csv", featureDir), os.O_APPEND|os.O_WRONLY, 0600)
-    defer reps.Close()
+    _, err = io.Copy(r, reps)
     if err != nil {
         return err
     }

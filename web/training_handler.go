@@ -61,13 +61,13 @@ func TrainingHandler() http.HandlerFunc {
             return
         }
 
-        err = s3util.UploadFile(fmt.Sprintf("%s/labels.csv", featureDir), fmt.Sprintf("features/%d/%d/labels.csv", userId, id))
+        err = s3util.UploadFile(fmt.Sprintf("%s/labels", featureDir), fmt.Sprintf("features/%d/%d/labels.csv", userId, id))
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
         }
 
-        err = s3util.UploadFile(fmt.Sprintf("%s/reps.csv", featureDir), fmt.Sprintf("features/%d/%d/reps.csv", userId, id))
+        err = s3util.UploadFile(fmt.Sprintf("%s/reps", featureDir), fmt.Sprintf("features/%d/%d/reps.csv", userId, id))
         if err != nil {
             http.Error(w, err.Error(), http.StatusInternalServerError)
             return
