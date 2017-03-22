@@ -5,6 +5,7 @@ import (
     "fa/model"
     "fa/openface"
     "fa/s3util"
+    "io/ioutil"
     "encoding/json"
     "os"
     "fmt"
@@ -16,19 +17,23 @@ func TrainingHandler() http.HandlerFunc {
         var l model.LovedOne
         err := json.NewDecoder(r.Body).Decode(&l)
         if err != nil {
-            http.Error(w, err.Error(), http.StatusBadRequest)
+            http.Error(w, "Failed to decode JSON: " + err.Error(), http.StatusBadRequest)
             return
         }
 
         uid := r.Header.Get("Authorization")
         userId, err := strconv.Atoi(uid)
         if err != nil {
-            http.Error(w, err.Error(), http.StatusInternalServerError)
+            http.Error(w, err.Error(), http.StatusUnauthorized)
             return
         }
 
         //dir := fmt.Sprintf("/tmp/%d", userId)
-        dir := fmt.Sprintf("/tmp/%d", userId)
+        dir, err := ioutil.TempDir("/tmp/", userId)
+        if err != nil {
+            http.Error(w, "Failed to make dir", http.StatusInternalServerError)
+            return
+        }
         imgDir := dir + "/images"
         alignDir := dir + "/align"
         featureDir := dir + "/feature"

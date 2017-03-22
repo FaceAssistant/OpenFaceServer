@@ -53,13 +53,13 @@ func GenReps(alignDir string, featureDir string) error {
 }
 
 func ConcatFeatures(featureDir string, userId int) error {
-    labels, err := os.OpenFile(fmt.Sprintf("%s/labels.csv", featureDir), os.O_APPEND|os.O_WRONLY, 0600)
+    labels, err := os.OpenFile(fmt.Sprintf("%s/labels.csv", featureDir), os.O_APPEND|os.O_RDWR, 0666)
     if err != nil {
         return err
     }
     defer labels.Close()
 
-    reps, err := os.OpenFile(fmt.Sprintf("%s/reps.csv", featureDir), os.O_APPEND|os.O_WRONLY, 0600)
+    reps, err := os.OpenFile(fmt.Sprintf("%s/reps.csv", featureDir), os.O_APPEND|os.O_RDWR, 0666)
     if err != nil {
         return err
     }
