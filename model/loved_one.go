@@ -1,7 +1,6 @@
 package model
 
 import (
-    "fmt"
     "encoding/base64"
     "encoding/json"
     "net/http"
@@ -11,6 +10,7 @@ import (
 )
 
 type Profile struct {
+    Id string               `json:"id"`
     Name string             `json:"name"`
     Birthday string         `json:"birthday"`
     Relationship string     `json:"relationship"`
@@ -19,7 +19,7 @@ type Profile struct {
 }
 
 type getLovedOnesResponse struct {
-    LovedOnes []int `json:"loved_ones"`
+    LovedOnes []string `json:"loved_ones"`
 }
 
 type LovedOne struct {
@@ -28,7 +28,7 @@ type LovedOne struct {
 }
 
 type insertDBResponse struct {
-    Id int `json:"id"`
+    Id string `json:"id"`
 }
 
 func(l *LovedOne) WriteImagesToFile(dir string) error {
@@ -51,39 +51,47 @@ func(l *LovedOne) WriteImagesToFile(dir string) error {
     return nil
 }
 
-func (l *LovedOne) InsertIntoDB(userId string) (int, error) {
+func (l *LovedOne) InsertIntoDB(idToken string) (string, error) {
     b, err := json.Marshal(l.Prof)
     if err != nil {
-        return -1, err
+        return "", err
     }
 
     buf := bytes.NewBuffer(b)
     req, err := http.NewRequest("POST","http://localhost/api/v1/users/loved-one", buf)
     if err != nil {
-        return -1, err
+        return "", err
     }
 
-    req.Header.Set("Authorization", userId)
+    req.Header.Set("Authorization", idToken)
     client := &http.Client{}
     resp, err := client.Do(req)
     if err != nil {
-        return -1, err
+        return "", err
     }
     defer resp.Body.Close()
 
     var r insertDBResponse
     err = json.NewDecoder(resp.Body).Decode(&r)
     if err != nil {
-        return -1, err
+        return "", err
     }
     return r.Id, nil
 }
 
-func GetIdsOfLovedOnes(userId int) ([]int, error) {
-    resp, err := http.Get(fmt.Sprintf("http://localhost/api/v1/users/loved-one?user_id=%d", userId))
+func GetIdsOfLovedOnes(idToken string) ([]string, error) {
+    req, err := http.NewRequest("GET", "http://localhost/api/v1/users/loved-one", nil)
     if err != nil {
         return nil, err
     }
+    req.Header.Set("Authorization", idToken)
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+        return nil, err
+    }
+
     defer resp.Body.Close()
 
     var r getLovedOnesResponse
@@ -93,6 +101,17 @@ func GetIdsOfLovedOnes(userId int) ([]int, error) {
     }
 
     return r.LovedOnes, nil
+}
+
+func GetLovedOneById(id string, idToken string) (*http.Response, error) {
+    req, err := http.NewRequest("GET", "http://localhost/api/v1/users/loved-one?id="+id, nil)
+    if err != nil {
+        return nil, err
+    }
+    req.Header.Set("Authorization", idToken)
+
+    client := &http.Client{}
+    return client.Do(req)
 }
 
 //Probably moved this to another package
@@ -115,4 +134,20 @@ func WriteBytesToFile(b []byte, dir string) (string, error) {
     }()
 
     return f.Name() + ".jpg", nil
+}
+
+func DeleteLovedOne(id string, idToken string) error {
+    req, err := http.NewRequest("Delete", "http://localhost/api/v1/users/loved-one?id="+id, nil)
+
+    if err != nil {
+        return err
+    }
+    req.Header.Set("Authorization", idToken)
+
+    client := &http.Client{}
+    _, err = client.Do(req)
+    if err != nil {
+        return err
+    }
+    return nil
 }

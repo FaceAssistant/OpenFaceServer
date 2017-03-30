@@ -61,8 +61,8 @@ func GetClassifier(userId string, dst io.Writer) error {
     return nil
 }
 
-func GetFeature(fileName string, userId int, dst io.Writer) error {
-    lovedOnes, err := model.GetIdsOfLovedOnes(userId)
+func GetFeature(fileName string, userId string, idToken string, dst io.Writer) error {
+    lovedOnes, err := model.GetIdsOfLovedOnes(idToken)
     if err != nil{
         return err
     }
@@ -79,7 +79,8 @@ func GetFeature(fileName string, userId int, dst io.Writer) error {
     }
 
     for _, id := range lovedOnes {
-        objectKey := fmt.Sprintf("features/%d/%d/%s", userId, id, fileName)
+        objectKey := fmt.Sprintf("features/%s/%s/%s", userId, id, fileName)
+        fmt.Println(objectKey)
         objReader, err := getObject("faceassist", objectKey)
         if err != nil {
             return err
@@ -91,6 +92,26 @@ func GetFeature(fileName string, userId int, dst io.Writer) error {
         }
         objReader.Close()
     }
+    return nil
+}
+
+func DeleteFeatures(id string, userId string) error {
+    sess, err := session.NewSession()
+    if err != nil {
+        return err
+    }
+
+    svc := s3.New(sess)
+    params := &s3.DeleteObjectInput{
+        Bucket: aws.String("faceassist"),
+        Key: aws.String(fmt.Sprintf("features/%s/%s/", userId, id)),
+    }
+
+    _, err = svc.DeleteObject(params)
+    if err != nil {
+        return err
+    }
+
     return nil
 }
 
@@ -112,6 +133,37 @@ func putS3Object(bucketName string, objectKey string, file io.ReadSeeker) error 
         return err
     }
     //log response
+    return nil
+}
+
+func deleteS3Objects(bucketName string, objectKeys []string) error {
+    sess, err := session.NewSession()
+    if err != nil {
+        return err
+    }
+
+    var objects []*s3.ObjectIdentifier
+
+    for _, key := range objectKeys {
+        o := &s3.ObjectIdentifier{
+            Key: aws.String(key),
+        }
+        objects = append(objects,o)
+    }
+
+    svc := s3.New(sess)
+    params := &s3.DeleteObjectsInput{
+        Bucket: aws.String(bucketName),
+        Delete: &s3.Delete{
+            Objects: objects,
+        },
+    }
+
+    _, err = svc.DeleteObjects(params)
+    if err != nil {
+        return err
+    }
+
     return nil
 }
 

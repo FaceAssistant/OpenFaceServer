@@ -4,7 +4,13 @@ import (
     "net/http"
     "net/http/httputil"
     "fmt"
+    "context"
+    "encoding/json"
 )
+
+type AuthResponse struct {
+    UserId string `json:"user_id"`
+}
 
 func AuthMiddleWare(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter,r *http.Request) {
@@ -22,8 +28,15 @@ func AuthMiddleWare(next http.Handler) http.Handler {
         }
         defer resp.Body.Close()
 
-        r.Header.Set("Authorization", resp.Header.Get("Authorization"))
-        next.ServeHTTP(w, r)
+        var a AuthResponse
+        err = json.NewDecoder(resp.Body).Decode(&a)
+        if err != nil {
+            http.Error(w, err.Error(), http.StatusInternalServerError)
+            return
+        }
+
+        newCtx := context.WithValue(r.Context(), "uid", a.UserId)
+        next.ServeHTTP(w, r.WithContext(newCtx))
     })
 }
 

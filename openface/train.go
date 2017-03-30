@@ -8,7 +8,7 @@ import (
     "os"
 )
 
-func Train(imgDir string, alignDir string, featureDir string, userId int) error {
+func Train(imgDir string, alignDir string, featureDir string, userId string, idToken string) error {
     err := AlignImages(imgDir, alignDir)
     if err != nil {
        return err
@@ -19,7 +19,7 @@ func Train(imgDir string, alignDir string, featureDir string, userId int) error 
         return err
     }
 
-    err = ConcatFeatures(featureDir, userId)
+    err = ConcatFeatures(featureDir, userId, idToken)
     if err != nil {
         return err
     }
@@ -52,7 +52,7 @@ func GenReps(alignDir string, featureDir string) error {
     return nil
 }
 
-func ConcatFeatures(featureDir string, userId int) error {
+func ConcatFeatures(featureDir string, userId string, idToken string) error {
     labels, err := os.OpenFile(fmt.Sprintf("%s/labels.csv", featureDir), os.O_APPEND|os.O_RDWR, 0666)
     if err != nil {
         return err
@@ -87,12 +87,12 @@ func ConcatFeatures(featureDir string, userId int) error {
         return err
     }
 
-    err = s3util.GetFeature("labels.csv", userId, labels)
+    err = s3util.GetFeature("labels.csv", userId, idToken, labels)
     if err != nil {
         return err
     }
 
-    err = s3util.GetFeature("reps.csv", userId, reps)
+    err = s3util.GetFeature("reps.csv", userId, idToken, reps)
     if err != nil {
         return err
     }
