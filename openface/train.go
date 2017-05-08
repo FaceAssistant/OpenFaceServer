@@ -65,13 +65,13 @@ func ConcatFeatures(featureDir string, userId string, idToken string) error {
     }
     defer reps.Close()
 
-    l, err := os.Create(fmt.Sprintf(featureDir + "/labels"))
+    l, err := os.Create(featureDir + "/labels")
     if err != nil {
         return err
     }
     defer l.Close()
 
-    r, err := os.Create(fmt.Sprintf(featureDir + "/reps"))
+    r, err := os.Create(featureDir + "/reps")
     if err != nil {
         return err
     }

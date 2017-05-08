@@ -137,7 +137,7 @@ func WriteBytesToFile(b []byte, dir string) (string, error) {
 }
 
 func DeleteLovedOne(id string, idToken string) error {
-    req, err := http.NewRequest("Delete", "http://localhost/api/v1/users/loved-one?id="+id, nil)
+    req, err := http.NewRequest("DELETE", "http://localhost/api/v1/users/loved-one?id="+id, nil)
 
     if err != nil {
         return err

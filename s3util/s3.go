@@ -80,7 +80,6 @@ func GetFeature(fileName string, userId string, idToken string, dst io.Writer) e
 
     for _, id := range lovedOnes {
         objectKey := fmt.Sprintf("features/%s/%s/%s", userId, id, fileName)
-        fmt.Println(objectKey)
         objReader, err := getObject("faceassist", objectKey)
         if err != nil {
             return err
@@ -96,22 +95,15 @@ func GetFeature(fileName string, userId string, idToken string, dst io.Writer) e
 }
 
 func DeleteFeatures(id string, userId string) error {
-    sess, err := session.NewSession()
+    objectKeys := []string{
+        fmt.Sprintf("features/%s/%s/labels.csv", userId, id),
+        fmt.Sprintf("features/%s/%s/reps.csv", userId, id),
+    }
+
+    err := deleteS3Objects("faceassist", objectKeys)
     if err != nil {
         return err
     }
-
-    svc := s3.New(sess)
-    params := &s3.DeleteObjectInput{
-        Bucket: aws.String("faceassist"),
-        Key: aws.String(fmt.Sprintf("features/%s/%s/", userId, id)),
-    }
-
-    _, err = svc.DeleteObject(params)
-    if err != nil {
-        return err
-    }
-
     return nil
 }
 
